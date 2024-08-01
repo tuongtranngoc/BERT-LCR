@@ -1,10 +1,10 @@
-model_folder: "../../model/rerank/custom/scibert/NN_prefetch/"
+model_folder: "exps/weights/"
 initial_model_path: "allenai/scibert_scivocab_uncased"
-log_folder: "../../log/rerank/custom/scibert/NN_prefetch/"
+log_folder: "logs"
 log_file_name: "train.log"
-paper_database_path: "../../data/custom/papers.json"
-train_corpus_path: "../../data/custom/train_with_prefetched_ids.json"
-val_corpus_path: "../../data/custom/val_with_prefetched_ids.json"
+paper_database_path: "dataset/acl_200/papers.json"
+train_corpus_path: "dataset/acl_200/train_with_prefetched_bm25.json"
+val_corpus_path: "dataset/acl_200/val_with_prefetched_bm25.json"
 num_epochs: 1
 n_device: 1
 n_document: 10
@@ -22,7 +22,7 @@ max_input_length: 512
 base_margin: 0.1
 rerank_top_K: 2000
 max_n_positive: 1
-context_database_path: "../../data/custom/contexts.json"
+context_database_path: "dataset/acl_200/contexts.json"
 train_corpus_sampling_ratio: 1.0
 val_corpus_sampling_ratio: 1.0
 max_num_checkpoints: 2

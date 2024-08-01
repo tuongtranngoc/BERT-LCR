@@ -2,11 +2,14 @@
 import os
 import json
 import argparse
+import pandas as pd
 from tqdm import tqdm
 from cache_decorator import Cache
 
 import spacy
 from rank_bm25 import BM25Okapi
+
+from src.utils.multiprocess import run_multiprocess_tqdm
 
 
 nlp = spacy.load('en_core_web_sm')
@@ -41,7 +44,10 @@ def paper_tokenizer(papers):
 
 def main(args):
     contexts = json.load(open(args.contexts_file))
-    context_hardnegatives = {}
+    corpus = json.load(open(args.corpus_file))
+    corpus = pd.DataFrame(corpus)
+    corpus['prefetched_ids'] = '[]'
+    corpus['prefetched_ids'] = corpus['prefetched_ids'].map(lambda x: eval(x))
 
     # preprocess all papers
     papers = json.load(open(args.papers_file))
@@ -63,7 +69,12 @@ def main(args):
     model = BM25Okapi(tokenized_papers)
     
     # get BM25 scores for contexts
-    for context, cid in tokenized_contexts:
+    print("Prefetching candidates ...")
+
+    global single_prefetch
+
+    def single_prefetch(data):
+        context, cid = data
         citing, cited = cid.split('_')[:2]
         scores = model.get_scores(context)
         
@@ -78,18 +89,22 @@ def main(args):
         # add cited id if not in candidates
         if cited not in sorted_pids:
             sorted_pids[-1] = cited
-        
-        context_hardnegatives[cid] = sorted_pids
 
-    json.dump(context_hardnegatives, open(args.output_file, 'wt'))
+        corpus.loc[corpus.context_id==cid, 'prefetched_ids'] = sorted_pids
+
+    run_multiprocess_tqdm(single_prefetch, tokenized_contexts, num_processes=8, chunk_size=10)
+ 
+    corpus = corpus.to_dict("records")
+    json.dump(corpus, open(args.output_file, 'wt'))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--contexts_file', help='JSON file with context texts')
     parser.add_argument('--papers_file', help='JSON file with paper title and abstracts')
+    parser.add_argument('--corpus_file', help='JSON file with corpus data (train/val/test)')
     parser.add_argument('--output_file', help='JSON file in which dictionary of context ids as keys and list of paper ids as values is written')
     parser.add_argument('--k', type=int, default=2000, help='number of candidates to produce for each context')
     args = parser.parse_args()
-
+    
     main(args)

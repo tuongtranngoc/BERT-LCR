@@ -7,7 +7,7 @@ import glob
 import os
 
 
-CFG_PATH = 'src/configs/scibert.yml'
+CFG_PATH = 'src/configs/scibert.yaml'
 
 
 def load_config(file_path=CFG_PATH):
