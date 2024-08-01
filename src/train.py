@@ -10,6 +10,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader 
 
+from src import config as args
 from src.utils.data_utils import *
 from src.models.model import Scorer
 from src.utils.losses import TripletLoss
@@ -63,13 +64,6 @@ def validate_iteration(batch):
 
 
 if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-config_file_path")
-    args_input = parser.parse_args()
-
-    args = Dict2Class(json.load(open(args_input.config_file_path)))
-
 
     if not os.path.exists(args.model_folder):
         os.makedirs(args.model_folder)

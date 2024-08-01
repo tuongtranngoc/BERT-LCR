@@ -90,10 +90,10 @@ def main(args):
         if cited not in sorted_pids:
             sorted_pids[-1] = cited
 
-        corpus.loc[corpus.context_id==cid, 'prefetched_ids'] = sorted_pids
+        corpus.loc[corpus.context_id==cid, 'prefetched_ids'] = str(sorted_pids)
 
-    run_multiprocess_tqdm(single_prefetch, tokenized_contexts, num_processes=8, chunk_size=10)
- 
+    run_multiprocess_tqdm(single_prefetch, tokenized_contexts[:2000], num_processes=8, chunk_size=10)
+    corpus.prefetched_ids = corpus.prefetched_ids.map(lambda x: eval(x) if isinstance(x, str) else x)
     corpus = corpus.to_dict("records")
     json.dump(corpus, open(args.output_file, 'wt'))
 
@@ -106,5 +106,5 @@ if __name__ == '__main__':
     parser.add_argument('--output_file', help='JSON file in which dictionary of context ids as keys and list of paper ids as values is written')
     parser.add_argument('--k', type=int, default=2000, help='number of candidates to produce for each context')
     args = parser.parse_args()
-    
+
     main(args)
