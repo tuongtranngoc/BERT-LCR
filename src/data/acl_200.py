@@ -7,7 +7,7 @@ from nltk.tokenize import sent_tokenize
 from torch.utils.data import Dataset, DataLoader
 
 
-class RerankDataset(Dataset):
+class ACL200Dataset(Dataset):
     def __init__(self, corpus = [], paper_database = {}, context_database = {},
                  tokenizer = None, 
                  rerank_top_K = 2000,
