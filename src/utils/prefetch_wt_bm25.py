@@ -46,8 +46,9 @@ def main(args):
     contexts = json.load(open(args.contexts_file))
     corpus = json.load(open(args.corpus_file))
     corpus = pd.DataFrame(corpus)
-    corpus['prefetched_ids'] = '[]'
-    corpus['prefetched_ids'] = corpus['prefetched_ids'].map(lambda x: eval(x))
+    corpus['prefetched_ids'] = pd.NA
+    corpus['prefetched_ids'] = corpus['prefetched_ids'].map(lambda x: [])
+    corpus = corpus.set_index('context_id', drop=False).to_dict('index')
 
     # preprocess all papers
     papers = json.load(open(args.papers_file))
@@ -90,11 +91,14 @@ def main(args):
         if cited not in sorted_pids:
             sorted_pids[-1] = cited
 
-        corpus.loc[corpus.context_id==cid, 'prefetched_ids'] = str(sorted_pids)
-
-    run_multiprocess_tqdm(single_prefetch, tokenized_contexts[:2000], num_processes=8, chunk_size=10)
-    corpus.prefetched_ids = corpus.prefetched_ids.map(lambda x: eval(x) if isinstance(x, str) else x)
-    corpus = corpus.to_dict("records")
+        return cid, sorted_pids
+    
+    res_list = run_multiprocess_tqdm(single_prefetch, tokenized_contexts, num_processes=8, chunk_size=10)
+    for res in tqdm(res_list, desc="Mapping data ..."):
+        cid, sorted_pids = res
+        if cid in corpus:
+            corpus[cid]['prefetched_ids'] = sorted_pids
+    corpus = list(corpus.values())
     json.dump(corpus, open(args.output_file, 'wt'))
 
 
