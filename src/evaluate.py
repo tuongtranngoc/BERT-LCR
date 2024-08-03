@@ -33,7 +33,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('input_files', nargs="+", help='JSON files containing recommendation scores')
+    parser.add_argument('--input_files', nargs="+", help='JSON files containing recommendation scores')
     args = parser.parse_args()
 
     main(args)

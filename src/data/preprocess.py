@@ -15,10 +15,10 @@ def reformat(data_path, mode='train'):
     
     elif mode == 'test':
         data = data.groupby(['context_id']).agg({'paper_id':list}).reset_index()
-        data.paper_ids = data.paper_ids.map(lambda x: list(set(x)))
-        data['positive_ids'] = data.conrtext_id.map(lambda x: [x.split('_')[1]])
+        data.paper_id = data.paper_id.map(lambda x: list(set(x)))
+        data['positive_ids'] = data.context_id.map(lambda x: [x.split('_')[1]])
         data = data.rename(columns={'paper_id':'prefetched_ids'})
-
+    
     elif mode == 'train':
         data.paper_id = data.paper_id.map(lambda x: [x])
         data = data.rename(columns={'paper_id': 'positive_ids'})

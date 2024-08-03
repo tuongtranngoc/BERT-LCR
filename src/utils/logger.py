@@ -14,7 +14,7 @@ def set_logger_tag(logger, tag):
     logger.configure(extra={"tag": tag})
 
 
-logfile = f'{os.path.join(cfg["Debug"]["log_dir"], cfg["model"]["backbone"])}' + '_' + '{time:YYYY-MM-DD}.log'
+logfile = f'{cfg["log_folder"]}' + '_' + '{time:YYYY-MM-DD}.log'
 set_logger_tag(logger, 'NOTAG')
 
 logger_format = (
