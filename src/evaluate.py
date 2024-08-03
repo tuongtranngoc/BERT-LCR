@@ -1,6 +1,4 @@
-import os
 import json
-import glob
 import argparse
 from math import log2
 
@@ -19,14 +17,13 @@ def ndcg(ranks, k):
 
 def main(args):
     ranks = []
-    for f in glob.glob(os.path.join(args.test_dir, "*.json")):
-        preds = json.load(open(f))
-        for cid in preds:
-            sorted_preds = [  # paper ids sorted by recommendation score
-                i[0] for i in sorted(preds[cid], key=lambda x: x[1], reverse=True)
-            ]
-            rank = sorted_preds.index(cid.split('_')[1]) + 1  # rank of correct recommendation
-            ranks.append(rank)
+    preds = json.load(open(args.pred_file))
+    for cid in preds:
+        sorted_preds = [  # paper ids sorted by recommendation score
+            i[0] for i in sorted(preds[cid], key=lambda x: x[1], reverse=True)
+        ]
+        rank = sorted_preds.index(cid.split('_')[1]) + 1  # rank of correct recommendation
+        ranks.append(rank)
 
     print(f'Recall@k: {recall(ranks, k=10):.5f}')
     print(f'MRR: {mrr(ranks, k=10):.5f}')
@@ -35,7 +32,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test_dir', help='JSON files containing recommendation scores')
+    parser.add_argument('--pred_file', help='JSON files containing recommendation scores')
     args = parser.parse_args()
 
     main(args)

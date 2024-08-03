@@ -21,4 +21,4 @@ class Scorer(nn.Module):
         ## CLS token's embedding
         net = net[:, 0, :].contiguous()
         score =  torch.sigmoid(self.ln_score(F.relu(net))).squeeze(1)
-        return score    
+        return score

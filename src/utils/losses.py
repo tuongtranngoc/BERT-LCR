@@ -8,10 +8,7 @@ class TripletLoss(nn.Module):
         self.base_margin = base_margin      
         self.positive_irrelevance_level = positive_irrelevance_level
         self.only_account_for_positive = only_account_for_positive
-    """ 
-    to be able to better support multiple-GPU training, here the data mining and weighting operation
-    are not done on the batch_size dimension (dimension 0), but on dimension 1 
-    """
+ 
     def forward(self, sims, irrelevance_levels):
         ### sims shape:   batch_size x num_candidate
         ### irrelevance_levels shape:   batch_size x num_candidate

@@ -85,8 +85,10 @@ class ACL200Dataset(Dataset):
         
         if self.mode == 'train':
             prefetched_ids = self.get_random_prefetched_samples(context_id)
-        elif self.mode in ['val', 'test']:
-            prefetched_ids = data['prefetched_ids'] + data['positive_ids']
+        elif self.mode == 'test':
+            prefetched_ids = data['prefetched_ids']
+        elif self.mode == 'val':
+            prefetched_ids = data['positive_ids'] + data['prefetched_ids']
 
         prefetched_ids = prefetched_ids[:self.rerank_top_K]
             
