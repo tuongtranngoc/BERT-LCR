@@ -1,4 +1,6 @@
+import os
 import json
+import glob
 import argparse
 from math import log2
 
@@ -17,7 +19,7 @@ def ndcg(ranks, k):
 
 def main(args):
     ranks = []
-    for f in args.input_files:
+    for f in glob(os.path.join(args.test_dir, ".json")):
         preds = json.load(open(f))
         for cid in preds:
             sorted_preds = [  # paper ids sorted by recommendation score
@@ -33,7 +35,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_files', nargs="+", help='JSON files containing recommendation scores')
+    parser.add_argument('--test_dir', nargs="+", help='JSON files containing recommendation scores')
     args = parser.parse_args()
 
     main(args)

@@ -55,7 +55,7 @@ if __name__ == "__main__":
         context_database = json.load(open(cfg['context_database_path']))
 
         dataset = ACL200Dataset(test_corpus, paper_database, context_database, tokenizer,
-                                    rerank_top_K = cfg['rerank_top_K'],
+                                    rerank_top_K = 100,
                                     max_input_length = cfg['max_input_length'],
                                     mode = 'test',
                                     max_n_positive = cfg['max_n_positive'],
@@ -83,7 +83,7 @@ if __name__ == "__main__":
             attention_mask = attention_mask.view(-1, attention_mask.size(2))
 
             score = []
-            for pos in range(0, input_ids.size(0), cfg['eval_sub_batch_size']):
+            for pos in tqdm(range(0, input_ids.size(0), cfg['eval_sub_batch_size'])):
                 with torch.no_grad():
                     score.append(scorer( 
                         {
@@ -91,6 +91,7 @@ if __name__ == "__main__":
                             "token_type_ids":token_type_ids[pos:pos+cfg['eval_sub_batch_size']],
                             "attention_mask":attention_mask[pos:pos+cfg['eval_sub_batch_size']]
                         }).detach())
+                    
             score = torch.cat(score, dim =0).view(-1, n_doc).cpu().tolist()
             for j, (cid, pid) in enumerate(zip(context_ids, positive_ids)):
                 context_scores[cid].append((pid[0], score[j]))
