@@ -1,31 +1,28 @@
 import os
 import json
 import time
-import argparse
 import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 
 import torch
-import torch.nn.functional as F
 from torch.utils.data import DataLoader 
 
 from src import config as cfg
 from src.utils.data_utils import *
 from src.models.model import Scorer
+from transformers import AutoTokenizer
 from src.data.preprocess import reformat
 from src.utils.losses import TripletLoss
 from src.data.acl_200 import ACL200Dataset
-from transformers import AdamW, AutoTokenizer
 
 
-def LOG(info, end="\n"):
-    with open(cfg['log_folder'] + "/"+ cfg['log_file_name'] , "a") as f:
-        f.write(info + end)
+from src.utils.logger import logger, set_logger_tag
+
+set_logger_tag(logger, tag="TRAINING")
 
 
 def train_iteration(batch):
-
     irrelevance_levels = batch["irrelevance_levels"].to(device)
     input_ids =  batch["input_ids"].to(device)
     token_type_ids = batch["token_type_ids"].to(device)
@@ -45,12 +42,10 @@ def train_iteration(batch):
     return loss.item()
 
 def validate_iteration(batch):
-
     irrelevance_levels = batch["irrelevance_levels"].to(device)
     input_ids =  batch["input_ids"].to(device)
     token_type_ids = batch["token_type_ids"].to(device)
     attention_mask = batch["attention_mask"].to(device)
-
 
     n_doc = input_ids.size(1)
     with torch.no_grad():
@@ -96,7 +91,7 @@ if __name__ == "__main__":
                                  )
     rerank_dataloader = DataLoader(rerank_dataset, batch_size= cfg['n_query_per_batch'], shuffle= True, 
                                   num_workers= cfg['num_workers'],  drop_last= True, 
-                                  worker_init_fn = lambda x:[np.random.seed(int(time.time()) + x), torch.manual_seed(int(time.time()) + x) ],
+                                  worker_init_fn = lambda x:[np.random.seed(int(time.time()) + x), torch.manual_seed(int(time.time()) + x)],
                                   pin_memory= True)
 
     val_corpus = reformat(cfg['val_corpus_path'], mode='val')
@@ -104,7 +99,7 @@ if __name__ == "__main__":
     val_rerank_dataset = ACL200Dataset(val_corpus, paper_database, context_database, tokenizer,
                                   rerank_top_K = cfg['rerank_top_K'],
                                   max_input_length = cfg['max_input_length'],
-                                  mode = 'train',
+                                  mode = 'val',
                                   n_document= cfg['n_document'], 
                                   max_n_positive = cfg['max_n_positive'],
                                  )
@@ -113,15 +108,12 @@ if __name__ == "__main__":
                                   worker_init_fn = lambda x:[np.random.seed(int(time.time())+x), torch.manual_seed(int(time.time()) + x)],
                                   pin_memory= True)
 
-
-
     vocab_size = len(tokenizer)
     scorer = Scorer(cfg['initial_model_path'], vocab_size)
 
     if ckpt is not None:
         scorer.load_state_dict(ckpt["scorer"])
-        LOG("model restored!")
-        print("model restored!")
+        logger.info("model restored!")
     
     if cfg['gpu_list'] is not None:
         assert len(cfg['gpu_list']) == cfg['n_device']
@@ -140,14 +132,12 @@ if __name__ == "__main__":
 
     if ckpt is not None:
         optimizer.load_state_dict(ckpt["optimizer"])
-        LOG("optimizer restored!")
-        print("optimizer restored!")
+        logger.info("optimizer restored!")
 
     current_batch = 0
     if ckpt is not None:
         current_batch = ckpt["current_batch"]
-        LOG("current_batch restored!")
-        print("current_batch restored!")
+        logger.info("current_batch restored!")
     running_losses = []
 
     triplet_loss = TripletLoss(cfg['base_margin'])
@@ -159,9 +149,8 @@ if __name__ == "__main__":
 
             running_losses.append(loss)
 
-            if current_batch % cfg['print_every'] == 0:
-                print("[batch: %05d] loss: %.4f"%(current_batch, np.mean(running_losses)))
-                LOG("[batch: %05d] loss: %.4f"%(current_batch, np.mean(running_losses)))
+            if current_batch % cfg['logger.info_every'] == 0:
+                logger.info("[batch: %05d] loss: %.4f"%(current_batch, np.mean(running_losses)))
                 os.system("nvidia-smi > %s/gpu_usage.log"%(cfg['log_folder']))
                 running_losses = []
             if current_batch % cfg['save_every'] == 0 :  
@@ -170,8 +159,7 @@ if __name__ == "__main__":
                     "scorer": scorer,
                     "optimizer": optimizer.state_dict()
                     } ,  cfg['model_folder']+"/model_batch_%d.pt"%(current_batch), 10)
-                print("Model saved!")
-                LOG("Model saved!")
+                logger.info("Model saved!")
 
             if current_batch % cfg['validate_every'] == 0:
                 running_losses_val = []
@@ -181,9 +169,7 @@ if __name__ == "__main__":
 
                     if val_count >= cfg['num_validation_iterations']:
                         break
-                print("[batch: %05d] validation loss: %.4f"%(current_batch, np.mean(running_losses_val) ))
-                LOG("[batch: %05d] validation loss: %.4f"%(current_batch, np.mean(running_losses_val) ))
-                
+                logger.info("[batch: %05d] validation loss: %.4f"%(current_batch, np.mean(running_losses_val)))                
 
         running_losses_val = []
         for val_count, batch in enumerate(tqdm(val_rerank_dataloader)):
@@ -191,13 +177,12 @@ if __name__ == "__main__":
             running_losses_val.append(loss)
             if val_count >= cfg['num_validation_iterations']:
                 break
-        print("[batch: %05d] validation loss: %.4f"%(current_batch, np.mean(running_losses_val) ))
-        LOG("[batch: %05d] validation loss: %.4f"%(current_batch, np.mean(running_losses_val) ))
+        logger.info("[batch: %05d] validation loss: %.4f"%(current_batch, np.mean(running_losses_val)))
 
-        save_model( { 
+        save_model({ 
                     "current_batch":current_batch,
                     "scorer": scorer,
                     "optimizer": optimizer.state_dict()
-                    } ,  cfg['model_folder']+"/model_batch_%d.pt"%(current_batch), cfg['max_num_checkpoints'])
-        print("Model saved!")
-        LOG("Model saved!")
+                    },  
+                    cfg['model_folder']+"/model_batch_%d.pt"%(current_batch), cfg['max_num_checkpoints'])
+        logger.info("Model saved!")

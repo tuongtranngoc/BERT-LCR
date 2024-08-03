@@ -86,7 +86,7 @@ class ACL200Dataset(Dataset):
         if self.mode == 'train':
             prefetched_ids = self.get_random_prefetched_samples(context_id)
         elif self.mode in ['val', 'test']:
-            prefetched_ids = data['prefetched_ids']
+            prefetched_ids = data['prefetched_ids'] + data['positive_ids']
             
         positive_ids = data['positive_ids']
         positive_ids_set = set(positive_ids)
@@ -130,7 +130,9 @@ class ACL200Dataset(Dataset):
         
         encoded_seqs.update({
                 "irrelevance_levels": irrelevance_levels_list,
-                "num_positive_ids": len(positive_ids)
+                "num_positive_ids": len(positive_ids),
+                "positive_ids": positive_ids,
+                'context_id': context_id,
               })
 
         return encoded_seqs

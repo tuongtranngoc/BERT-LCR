@@ -7,7 +7,7 @@ train_corpus_path: "dataset/acl_200/train.json"
 test_corpus_path: "dataset/acl_200/test.json"
 val_corpus_path: "dataset/acl_200/val.json"
 context_database_path: "dataset/acl_200/contexts_200.json"
-num_epochs: 1
+num_epochs: 5
 n_device: 1
 n_document: 10
 n_query_per_batch: 1
@@ -16,8 +16,8 @@ restore_old_checkpoint: 1
 initial_learning_rate: 1e-5
 l2_weight: 0.01
 num_workers: 8
-print_every: 1000
 save_every: 2000
+print_every: 1000
 validate_every: 2000
 num_validation_iterations: 1000
 max_input_length: 512
