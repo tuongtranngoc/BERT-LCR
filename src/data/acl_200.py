@@ -87,6 +87,8 @@ class ACL200Dataset(Dataset):
             prefetched_ids = self.get_random_prefetched_samples(context_id)
         elif self.mode in ['val', 'test']:
             prefetched_ids = data['prefetched_ids'] + data['positive_ids']
+
+        prefetched_ids = prefetched_ids[:self.rerank_top_K]
             
         positive_ids = data['positive_ids']
         positive_ids_set = set(positive_ids)
@@ -112,7 +114,7 @@ class ACL200Dataset(Dataset):
                                                 for candidate_id in candidate_id_list]).astype(np.float32)
         query_text_list = []
         candidate_text_list = []
-
+        
         for candidate_id in candidate_id_list:
             candidate_text = self.get_paper_text(candidate_id)
             
@@ -131,8 +133,8 @@ class ACL200Dataset(Dataset):
         encoded_seqs.update({
                 "irrelevance_levels": irrelevance_levels_list,
                 "num_positive_ids": len(positive_ids),
-                "positive_ids": positive_ids,
-                'context_id': context_id,
+                "candidate_ids": candidate_id_list,
+                'context_id': context_id
               })
 
         return encoded_seqs

@@ -19,7 +19,7 @@ def ndcg(ranks, k):
 
 def main(args):
     ranks = []
-    for f in glob(os.path.join(args.test_dir, ".json")):
+    for f in glob.glob(os.path.join(args.test_dir, "*.json")):
         preds = json.load(open(f))
         for cid in preds:
             sorted_preds = [  # paper ids sorted by recommendation score
@@ -35,7 +35,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test_dir', nargs="+", help='JSON files containing recommendation scores')
+    parser.add_argument('--test_dir', help='JSON files containing recommendation scores')
     args = parser.parse_args()
 
     main(args)

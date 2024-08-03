@@ -23,7 +23,7 @@ num_validation_iterations: 1000
 eval_sub_batch_size: 100
 max_input_length: 512
 base_margin: 0.1
-rerank_top_K: 100
+rerank_top_K: 2000
 n_training_examples_wt_prefetched_ids_for_reranking: 10000
 n_valid_examples_wt_prefetched_ids_for_reranking: 1000
 max_n_positive: 1
