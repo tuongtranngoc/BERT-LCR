@@ -20,5 +20,5 @@ class Scorer(nn.Module):
         net = self.bert_model(**inputs)[0]
         ## CLS token's embedding
         net = net[:, 0, :].contiguous()
-        score =  F.sigmoid(self.ln_score(F.relu(net))).squeeze(1)
+        score =  torch.sigmoid(self.ln_score(F.relu(net))).squeeze(1)
         return score    

@@ -10,16 +10,17 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader 
 
-from src import config as args
+from src import config as cfg
 from src.utils.data_utils import *
 from src.models.model import Scorer
+from src.data.preprocess import reformat
 from src.utils.losses import TripletLoss
-from src.data.acl_200 import RerankDataset
+from src.data.acl_200 import ACL200Dataset
 from transformers import AdamW, AutoTokenizer
 
 
 def LOG(info, end="\n"):
-    with open(args.log_folder + "/"+ args.log_file_name , "a") as f:
+    with open(cfg['log_folder'] + "/"+ cfg['log_file_name'] , "a") as f:
         f.write(info + end)
 
 
@@ -65,79 +66,77 @@ def validate_iteration(batch):
 
 if __name__ == "__main__":
 
-    if not os.path.exists(args.model_folder):
-        os.makedirs(args.model_folder)
-    if not os.path.exists(args.log_folder):
-        os.makedirs(args.log_folder)
+    if not os.path.exists(cfg['model_folder']):
+        os.makedirs(cfg['model_folder'])
+    if not os.path.exists(cfg['log_folder']):
+        os.makedirs(cfg['log_folder'])
 
     # restore most recent checkpoint
-    if args.restore_old_checkpoint:
-        ckpt = load_model(args.model_folder)
+    if cfg['restore_old_checkpoint']:
+        ckpt = load_model(cfg['model_folder'])
     else:
         ckpt = None
 
-    tokenizer = AutoTokenizer.from_pretrained(args.initial_model_path)
+    tokenizer = AutoTokenizer.from_pretrained(cfg['initial_model_path'])
     tokenizer.add_special_tokens({ 'additional_special_tokens': ['<cit>','<sep>','<eos>'] })
     
-    corpus = json.load(open(args.train_corpus_path, "r"))
-                
+    train_corpus = reformat(cfg['train_corpus_path'], mode='train')
 
-    paper_database = json.load(open(args.paper_database_path))
-
-    context_database = json.load(open(args.context_database_path))
+    paper_database = json.load(open(cfg['paper_database_path']))
+    
+    context_database = json.load(open(cfg['context_database_path']))
 
         
-    rerank_dataset = RerankDataset(corpus, paper_database, context_database, tokenizer,
-                                  rerank_top_K = args.rerank_top_K,
-                                  max_input_length = args.max_input_length,
-                                  is_training = True,
-                                  n_document= args.n_document, 
-                                  max_n_positive = args.max_n_positive,
+    rerank_dataset = ACL200Dataset(train_corpus, paper_database, context_database, tokenizer,
+                                  rerank_top_K = cfg['rerank_top_K'],
+                                  max_input_length = cfg['max_input_length'],
+                                  mode = 'train',
+                                  n_document= cfg['n_document'], 
+                                  max_n_positive = cfg['max_n_positive'],
                                  )
-    rerank_dataloader = DataLoader(rerank_dataset, batch_size= args.n_query_per_batch, shuffle= True, 
-                                  num_workers= args.num_workers,  drop_last= True, 
-                                  worker_init_fn = lambda x:[np.random.seed(int(time.time())+x), torch.manual_seed(int(time.time()) + x) ],
+    rerank_dataloader = DataLoader(rerank_dataset, batch_size= cfg['n_query_per_batch'], shuffle= True, 
+                                  num_workers= cfg['num_workers'],  drop_last= True, 
+                                  worker_init_fn = lambda x:[np.random.seed(int(time.time()) + x), torch.manual_seed(int(time.time()) + x) ],
                                   pin_memory= True)
 
-    
-    val_corpus = json.load(open(args.val_corpus_path, "r"))
+    val_corpus = reformat(cfg['val_corpus_path'], mode='val')
 
-    val_rerank_dataset = RerankDataset(val_corpus, paper_database, context_database, tokenizer,
-                                  rerank_top_K = args.rerank_top_K,
-                                  max_input_length = args.max_input_length,
-                                  is_training = True,
-                                  n_document= args.n_document, 
-                                  max_n_positive = args.max_n_positive,
+    val_rerank_dataset = ACL200Dataset(val_corpus, paper_database, context_database, tokenizer,
+                                  rerank_top_K = cfg['rerank_top_K'],
+                                  max_input_length = cfg['max_input_length'],
+                                  mode = 'train',
+                                  n_document= cfg['n_document'], 
+                                  max_n_positive = cfg['max_n_positive'],
                                  )
-    val_rerank_dataloader = DataLoader(val_rerank_dataset, batch_size= args.n_query_per_batch, shuffle= False, 
-                                  num_workers= args.num_workers,  drop_last= True, 
-                                  worker_init_fn = lambda x:[np.random.seed(int(time.time())+x), torch.manual_seed(int(time.time()) + x) ],
+    val_rerank_dataloader = DataLoader(val_rerank_dataset, batch_size= cfg['n_query_per_batch'], shuffle= False, 
+                                  num_workers= cfg['num_workers'],  drop_last= True, 
+                                  worker_init_fn = lambda x:[np.random.seed(int(time.time())+x), torch.manual_seed(int(time.time()) + x)],
                                   pin_memory= True)
 
 
 
     vocab_size = len(tokenizer)
-    scorer = Scorer(args.initial_model_path, vocab_size)
+    scorer = Scorer(cfg['initial_model_path'], vocab_size)
 
     if ckpt is not None:
         scorer.load_state_dict(ckpt["scorer"])
         LOG("model restored!")
         print("model restored!")
     
-    if args.gpu_list is not None:
-        assert len(args.gpu_list) == args.n_device
+    if cfg['gpu_list'] is not None:
+        assert len(cfg['gpu_list']) == cfg['n_device']
     else:
-        args.gpu_list = np.arange(args.n_device).tolist()
+        cfg['gpu_list'] = np.arange(cfg['n_device']).tolist()
 
-    device = torch.device("cuda:%d"%(args.gpu_list[0]) if torch.cuda.is_available() else "cpu" )
+    device = torch.device("cuda:%d"%(cfg['gpu_list'][0]) if torch.cuda.is_available() else "cpu" )
     scorer.to(device)
 
-    if device.type == "cuda" and args.n_device > 1:
-        scorer = nn.DataParallel(scorer, args.gpu_list)
+    if device.type == "cuda" and cfg['n_device'] > 1:
+        scorer = nn.DataParallel(scorer, cfg['gpu_list'])
         model_parameters = [ par for par in scorer.module.parameters() if par.requires_grad  ] 
     else:
         model_parameters = [ par for par in scorer.parameters() if par.requires_grad  ] 
-    optimizer = AdamW(model_parameters , lr= args.initial_learning_rate,  weight_decay = args.l2_weight ) 
+    optimizer = torch.optim.AdamW(model_parameters , lr= float(cfg['initial_learning_rate']),  weight_decay = cfg['l2_weight'] ) 
 
     if ckpt is not None:
         optimizer.load_state_dict(ckpt["optimizer"])
@@ -151,8 +150,8 @@ if __name__ == "__main__":
         print("current_batch restored!")
     running_losses = []
 
-    triplet_loss = TripletLoss(args.base_margin)
-    for epoch in range(args.num_epochs):
+    triplet_loss = TripletLoss(cfg['base_margin'])
+    for epoch in range(cfg['num_epochs']):
         for count, batch in enumerate(tqdm(rerank_dataloader)):
             current_batch +=1
 
@@ -160,27 +159,27 @@ if __name__ == "__main__":
 
             running_losses.append(loss)
 
-            if current_batch % args.print_every == 0:
+            if current_batch % cfg['print_every'] == 0:
                 print("[batch: %05d] loss: %.4f"%(current_batch, np.mean(running_losses)))
                 LOG("[batch: %05d] loss: %.4f"%(current_batch, np.mean(running_losses)))
-                os.system("nvidia-smi > %s/gpu_usage.log"%(args.log_folder))
+                os.system("nvidia-smi > %s/gpu_usage.log"%(cfg['log_folder']))
                 running_losses = []
-            if current_batch % args.save_every == 0 :  
+            if current_batch % cfg['save_every'] == 0 :  
                 save_model( { 
                     "current_batch":current_batch,
                     "scorer": scorer,
                     "optimizer": optimizer.state_dict()
-                    } ,  args.model_folder+"/model_batch_%d.pt"%(current_batch), 10)
+                    } ,  cfg['model_folder']+"/model_batch_%d.pt"%(current_batch), 10)
                 print("Model saved!")
                 LOG("Model saved!")
 
-            if current_batch % args.validate_every == 0:
+            if current_batch % cfg['validate_every'] == 0:
                 running_losses_val = []
                 for val_count, batch in enumerate(tqdm(val_rerank_dataloader)):
                     loss = validate_iteration(batch)
                     running_losses_val.append(loss)
 
-                    if val_count >= args.num_validation_iterations:
+                    if val_count >= cfg['num_validation_iterations']:
                         break
                 print("[batch: %05d] validation loss: %.4f"%(current_batch, np.mean(running_losses_val) ))
                 LOG("[batch: %05d] validation loss: %.4f"%(current_batch, np.mean(running_losses_val) ))
@@ -190,7 +189,7 @@ if __name__ == "__main__":
         for val_count, batch in enumerate(tqdm(val_rerank_dataloader)):
             loss = validate_iteration(batch)
             running_losses_val.append(loss)
-            if val_count >= args.num_validation_iterations:
+            if val_count >= cfg['num_validation_iterations']:
                 break
         print("[batch: %05d] validation loss: %.4f"%(current_batch, np.mean(running_losses_val) ))
         LOG("[batch: %05d] validation loss: %.4f"%(current_batch, np.mean(running_losses_val) ))
@@ -199,6 +198,6 @@ if __name__ == "__main__":
                     "current_batch":current_batch,
                     "scorer": scorer,
                     "optimizer": optimizer.state_dict()
-                    } ,  args.model_folder+"/model_batch_%d.pt"%(current_batch), args.max_num_checkpoints)
+                    } ,  cfg['model_folder']+"/model_batch_%d.pt"%(current_batch), cfg['max_num_checkpoints'])
         print("Model saved!")
         LOG("Model saved!")
