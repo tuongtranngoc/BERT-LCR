@@ -14,7 +14,7 @@ def set_logger_tag(logger, tag):
     logger.configure(extra={"tag": tag})
 
 
-logfile = f'{cfg["log_folder"]}' + '_' + '{time:YYYY-MM-DD}.log'
+logfile = os.path.join(f'{cfg["log_folder"]}', '{time:YYYY-MM-DD}.log')
 set_logger_tag(logger, 'NOTAG')
 
 logger_format = (

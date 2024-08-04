@@ -18,12 +18,12 @@ class TripletLoss(nn.Module):
         sims_difference = sims.unsqueeze(1) - sims.unsqueeze(2)
         irrelevance_levels_difference = irrelevance_levels.unsqueeze(1) - irrelevance_levels.unsqueeze(2)
         margin = self.base_margin * irrelevance_levels_difference
-        loss =  torch.clamp( sims_difference + margin, min=0)
+        loss =  torch.clamp(sims_difference + margin, min=0)
         ## only count the loss for the positive one, (irrelevance level == 0)
         weight = torch.ones_like( loss ).masked_fill( irrelevance_levels_difference <= 0, 0.0)
         if self.only_account_for_positive:
             weight = weight.masked_fill( irrelevance_levels.unsqueeze(2) != self.positive_irrelevance_level, 0.0  )
 
         loss = loss*weight
-
+        
         return loss.sum(2).sum(1).mean()
