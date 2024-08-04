@@ -59,18 +59,24 @@ class ACL200Dataset(Dataset):
         title = paper_info.get("title","")
         abstract = paper_info.get("abstract", "")
         return title + " " + abstract
+    
+    @staticmethod
+    def year_from_id(paper_id):
+        digits = int(paper_id[1:3])
+        return 2000 + digits if digits < 60 else 1900 + digits
 
     def get_random_prefetched_samples(self, context_id):
-        citting, cited = context_id.split('_')[:2]
+        citing, cited = context_id.split('_')[:2]
         random_papers = set()
         while len(random_papers) < cfg['num_negs']:
             paper_ids = random.sample(self.paper_database.keys(), k=cfg['num_negs'])
             for pid in paper_ids:
-                if pid in [citting, cited]:
+                if pid in [citing, cited]:
                     continue
+                if self.year_from_id(pid) > self.year_from_id(citing):  # skip new papers
+                        continue
                 random_papers.add(pid)
         return list(random_papers)[:cfg['num_negs']]
-    
     
     def __getitem__(self, idx):
         ## step 1: get the query information, based on local or global citation recommendation 
@@ -104,7 +110,7 @@ class ACL200Dataset(Dataset):
             candidate_id_list = [positive_ids[i]  for i in positive_id_indices[:self.max_n_positive]]
             irrelevance_levels_list = [self.irrelevance_level_for_positive] * len(candidate_id_list)  
 
-            for pos in  np.random.choice(len(negative_ids), self.n_document - len(candidate_id_list)):
+            for pos in np.random.choice(len(negative_ids), self.n_document - len(candidate_id_list)):
                 irrelevance_levels_list.append(self.irrelevance_level_for_negative)
                 candidate_id_list.append(negative_ids[pos])
             irrelevance_levels_list = np.array(irrelevance_levels_list).astype(np.float32)

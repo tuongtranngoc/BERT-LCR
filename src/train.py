@@ -149,7 +149,7 @@ if __name__ == "__main__":
 
             running_losses.append(loss)
 
-            if current_batch % cfg['logger.info_every'] == 0:
+            if current_batch % cfg['print_every'] == 0:
                 logger.info("[batch: %05d] loss: %.4f"%(current_batch, np.mean(running_losses)))
                 os.system("nvidia-smi > %s/gpu_usage.log"%(cfg['log_folder']))
                 running_losses = []
