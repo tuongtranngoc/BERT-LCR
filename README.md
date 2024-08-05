@@ -29,9 +29,9 @@ python -m src.train
 ## Evaluation
 The testing set is so large (articles from 2015) that we only suggest testing with 100 examples randomly.
 
-First, please run `prediction.py` file to get the score results 
+First, please run the `prediction.py` file to get the score results 
 ```shell
-python -m src.predict --model_dir <path_to_model_directory> --out_dir <path_to_result_output_file> --test_file dataset/acl_200/small_test/small_test.json
+python -m src.predict --model_dir <path_to_model_directory> --out_dir <path_to_result_output_file> --test_file dataset/acl_200/test_100.json
 ```
 
 Next, to get the evaluation result, please run the command:
